@@ -3,6 +3,7 @@ import os.path as osp
 import torch
 from torch_geometric.data import Dataset, download_url
 from torch_geometric.data import InMemoryDataset, HeteroData, Data
+from torch_geometric.utils import remove_self_loops, add_self_loops
 import os
 from pathlib import Path
 
@@ -45,8 +46,8 @@ class MetaQADataset(Dataset):
             d = l.strip().split("\t")
             x_temp.append([int(d[0])])
             self.entities[d[1]] = int(d[0])
-        x = torch.tensor(x_temp, dtype=torch.long)
-        print(x)
+        self.x = torch.tensor(x_temp, dtype=torch.long)
+        # print(x)
 
         self.relations = {}
         i = 0
@@ -66,12 +67,12 @@ class MetaQADataset(Dataset):
             edge_attr_temp.append([self.relations[d[1]]])
         
        
-        edge_index = torch.tensor([edge_index_temp1,
+        self.edge_index = torch.tensor([edge_index_temp1,
                            edge_index_temp2], dtype=torch.long)
-        edge_attr = torch.tensor(edge_attr_temp, dtype=torch.long)
-        # print(edge_index)
-        # print(edge_attr)
-        data = Data(x = x, edge_index = edge_index, edge_attr = edge_attr)
+        self.edge_index, _= remove_self_loops(self.edge_index)
+        self.edge_index, _ = add_self_loops(self.edge_index, num_nodes=self.x.size(0))
+        self.edge_attr = torch.tensor(edge_attr_temp, dtype=torch.long)
+        data = Data(x = self.x, edge_index = self.edge_index, edge_attr = self.edge_attr)
 
         torch.save(data, self.processed_paths[0])
 
@@ -81,7 +82,7 @@ class MetaQADataset(Dataset):
     def len(self):
         return len(self.processed_file_names)
 
-    def get(self):
+    def get(self, idx):
         data = torch.load(self.processed_paths[0])
         return data
     
