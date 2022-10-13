@@ -80,7 +80,7 @@ class MetaQADataset(Dataset):
             torch.save(self._get_qa_from_file(self.raw_paths[i+1]), self.processed_paths[i])
 
     def len(self):
-        return len(self.processed_file_names)
+        return 1
 
     def get(self, idx):
         data = torch.load(self.processed_paths[0])
