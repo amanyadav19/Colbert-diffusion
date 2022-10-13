@@ -14,14 +14,28 @@ class MetaQADataset(Dataset):
 
     @property
     def raw_file_names(self):
-        return ['kb_entity_dict.txt', 'kb.txt']
+        return ['kb_entity_dict.txt', 'kb.txt', 'vanilla/qa_train.txt', 'vanilla/qa_dev.txt', 'vanilla/qa_test.txt']
 
     @property
     def processed_file_names(self):
-        return ['meta_qa.pt']
+        return ['meta_qa.pt', 'qs_train.pt', 'qs_dev.pt', 'qs_test.pt']
 
     def download(self):
         pass
+
+    def _get_qa_from_file(self, file):
+        query_subgraph_data = []
+        with open(file) as f:
+            for line in f.readlines():
+                line = line.strip()
+                if line == '':
+                    continue
+                line = line.split('\t')
+                question = line[0].replace('[','').strip()
+                answer_subgraphs = [(self.entities[answer], [], []) for answer in line[1].split('|')]
+
+                query_subgraph_data.append([question, answer_subgraphs])
+        return query_subgraph_data
 
     def process(self):
         f = open(self.raw_paths[0], "r")
@@ -60,7 +74,10 @@ class MetaQADataset(Dataset):
         data = Data(x = x, edge_index = edge_index, edge_attr = edge_attr)
 
         torch.save(data, self.processed_paths[0])
-    
+
+        for i in range(1,4):
+            torch.save(self._get_qa_from_file(self.raw_paths[i+1]), self.processed_paths[i])
+
     def len(self):
         return len(self.processed_file_names)
 
@@ -68,3 +85,14 @@ class MetaQADataset(Dataset):
         data = torch.load(self.processed_paths[0])
         return data
     
+    def getQSdata(self, type="train"):
+        typeToIndex = {
+            "train" : 1,
+            "dev" : 2,
+            "test" : 3
+        }
+
+        if type in typeToIndex:
+            return torch.load(self.processed_paths[typeToIndex[type]])
+        else:
+            raise Exception(f"Unknown type of data {type}, expected : 'train', 'test' or 'dev'")
