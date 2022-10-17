@@ -1,20 +1,26 @@
-from dataset import MetaQADataset
-from torch_geometric.loader import DataLoader
+from dataset import MetaQADataset, QuerySubgraphDataset
+from torch_geometric.loader import DataLoader as GraphDataLoader
+from torch.utils.data import DataLoader
 from sklearn.metrics import roc_auc_score
 from message_passing import SAGEConv
 import torch
 from GNN import Net
 
-metaQAdata = MetaQADataset('/mnt/infonas/data/amanyadav/MetaQA')
-metaQAdata_train = metaQAdata.shuffle()
+DATA_ROOT = '/mnt/infonas/data/amanyadav/MetaQA'
+DEVICE = torch.device('cpu')
+QS_BATCH_SIZE = 1024
+
+metaqa_graph = MetaQADataset(DATA_ROOT)
+qs_train_data = QuerySubgraphDataset(DATA_ROOT, 'train', metaqa_graph)
 # print(type(metaQAdata_train))
 # print(len(metaQAdata_train.x))
 
-batch_size= 1024
-train_loader = DataLoader(metaQAdata_train, batch_size=batch_size)
+train_loader = GraphDataLoader(metaqa_graph, batch_size=1)
 
-device = torch.device('cpu')
-model = Net(metaQAdata_train.x.size(dim=0), metaQAdata_train.edge_index[0].size(dim=0)).to(device)
+qs_batch_size = 1024
+qs_train_loader = DataLoader(qs_train_data, batch_size=qs_batch_size)
+
+model = Net(metaqa_graph.x.size(dim=0), metaqa_graph.edge_index[0].size(dim=0)).to(DEVICE)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
 crit = torch.nn.BCELoss()
 

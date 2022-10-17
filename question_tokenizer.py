@@ -6,7 +6,7 @@ class QuestionTokenizer():
         self.tok = AutoTokenizer.from_pretrained(base)
 
     def encode(self, questions):
-        assert type(questions) in [list, tuple], type(questions)
+        assert type(questions) in [list], type(questions)
 
         encoding = self.tok(questions, padding='longest', truncation='longest_first',
                             return_tensors='pt', max_length=self.total_maxlen, add_special_tokens=True)

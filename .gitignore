@@ -1,1 +1,4 @@
 __pycache__
+visualize/*.html
+lib
+visualize/lib
