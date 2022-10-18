@@ -8,6 +8,7 @@ from torch_geometric.utils import remove_self_loops, add_self_loops
 import networkx as nx
 
 from misc.networkx_utils import generate_random_paths
+from visualize.utils import add_neighbours
 
 
 class MetaQADataset(Dataset):
@@ -60,7 +61,9 @@ class MetaQADataset(Dataset):
         self.edge_index, _= remove_self_loops(self.edge_index)
         self.edge_index, _ = add_self_loops(self.edge_index, num_nodes=self.x.size(0))
         self.edge_attr = torch.tensor([[e] for e in self.edge_type], dtype=torch.long)
-        data = Data(x = self.x, edge_index = self.edge_index, edge_attr = self.edge_attr)
+        data = Data(x = self.x, edge_index = self.edge_index, edge_attr = self.edge_attr,
+                    entities=self.entities, relations = self.relations, edge_type = self.edge_type,
+                    edge_node1 = self.edge_node1, edge_node2 = self.edge_node2)
 
         torch.save(data, self.processed_paths[0])
 
@@ -110,24 +113,26 @@ def collate_batch(batch, tokenizer, graph, visualize=False):
 
     questions, entities,  answer_subg = list(zip(*batch))
 
-    subg_pairs = [(positive_sample(graph, random.choice(answers), entity, return_nx=visualize) , negative_sample(graph, answers, return_nx=visualize)) for entity, answers in  zip(entities, answer_subg)]
-    pos_subg, neg_subg = list(zip(*subg_pairs))
-
-    return questions if visualize else tokenizer(list(questions)), pos_subg, neg_subg
-
-
-def positive_sample(graph, answer_subg, entity, return_nx=False):
-    "Answer subg is a subgraph with a singleton node"
     nx_graph = nx.DiGraph()
     inv_relations_map = {v: k for k, v in graph.relations.items()}
     _nodes = [(y, {"label" : x}) for x,y in graph.entities.items()]
     _edges = [(x, y, {"label" : inv_relations_map[etype]} ) for x,y,etype in zip(graph.edge_node1, graph.edge_node2, graph.edge_type)]
     nx_graph.add_nodes_from(_nodes)
     nx_graph.add_edges_from(_edges)
+
+    subg_pairs = [(positive_sample(nx_graph, random.choice(answers), entity, return_nx=visualize) , negative_sample(nx_graph, answers, return_nx=visualize)) for entity, answers in  zip(entities, answer_subg)]
+    pos_subg, neg_subg = list(zip(*subg_pairs))
+
+    return questions if visualize else tokenizer(list(questions)), pos_subg, neg_subg
+
+
+def positive_sample(nx_graph, answer_subg, entity, return_nx=False):
+    "Answer subg is a subgraph with a singleton node"
     positive_subg = nx.shortest_path(nx_graph.to_undirected(), answer_subg[0][0], entity)
 
     if return_nx:
         subgraph = nx.subgraph(nx_graph, positive_subg).copy()
+        subgraph = add_neighbours(subgraph, nx_graph)
         subgraph.nodes[answer_subg[0][0]]['type'] = 'answer'
         subgraph.nodes[entity]['type'] = 'entity'
         return subgraph
@@ -135,14 +140,8 @@ def positive_sample(graph, answer_subg, entity, return_nx=False):
         edges = [(i,j) if nx_graph.has_edge(i,j) else (j,i) for i,j in zip(positive_subg[1:], positive_subg[:-1])]
         return (positive_subg, *list(zip(*edges)))
 
-def negative_sample(graph, answers, return_nx=False):
+def negative_sample(nx_graph, answers, return_nx=False):
     "Answer is a list of subgraphs with a singleton node"
-    nx_graph = nx.DiGraph()
-    inv_relations_map = {v: k for k, v in graph.relations.items()}
-    _nodes = [(y, {"label" : x}) for x,y in graph.entities.items()]
-    _edges = [(x, y, {"label" : inv_relations_map[etype]} ) for x,y,etype in zip(graph.edge_node1, graph.edge_node2, graph.edge_type)]
-    nx_graph.add_nodes_from(_nodes)
-    nx_graph.add_edges_from(_edges)
 
     answers = [answer[0][0] for answer in answers]
     ans_neighbourhood = [list(nx_graph.adj[answer].keys()) for answer in answers]
@@ -159,6 +158,7 @@ def negative_sample(graph, answers, return_nx=False):
 
     if return_nx:
         subgraph = nx.subgraph(nx_graph, negative_subg).copy()
+        subgraph = add_neighbours(subgraph, nx_graph)
         subgraph.nodes[start_node]['type'] = 'start_node'
         return subgraph
     else:

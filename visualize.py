@@ -12,7 +12,7 @@ DEVICE = torch.device('cpu')
 print(DEVICE)
 
 # %%
-metaqa_graph = MetaQADataset(DATA_ROOT)
+metaqa_graph = MetaQADataset(DATA_ROOT).get()
 len(metaqa_graph.entities)
 
 # %%
@@ -26,8 +26,8 @@ qs_dataloader = DataLoader(qs_train_data, collate_fn=lambda x: collate_batch(x, 
 # %%
 for batch in qs_dataloader:
     q, p_sg, n_sg = batch
-    visualize(p_sg[0], 'visualize/pos.html',heading=q[0])
-    visualize(n_sg[0], 'visualize/neg.html',heading=q[0])
+    visualize(p_sg[0], 'visualize/pos.html', heading=q[0])
+    visualize(n_sg[0], 'visualize/neg.html', heading=q[0])
     break
 
 # %%
