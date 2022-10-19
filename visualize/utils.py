@@ -1,6 +1,7 @@
+from random import random
 from pyvis import network
 import networkx as nx
-from sklearn import neighbors
+import random
 
 def visualize(graph: nx.Graph, path: str, notebook: bool=False, heading: str=""):
     g = network.Network(directed=True,notebook=notebook, heading=heading, select_menu=True, filter_menu=True)
@@ -15,6 +16,8 @@ def add_neighbours(subgraph: nx.Graph, graph: nx.Graph):
         neighbors.extend(_graph.neighbors(n))
     
     neighbors = set(neighbors)
+    if len(neighbors) > 20:
+        neighbors = set(random.sample(neighbors, 20))
     subgraph_nodes = set(subgraph)
 
     new_subgraph = graph.subgraph(neighbors.union(subgraph_nodes)).copy()

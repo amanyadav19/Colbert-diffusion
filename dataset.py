@@ -82,7 +82,7 @@ class QuerySubgraphDataset(torch.utils.data.Dataset):
         self.root = root
         self.type = type
         self.graph = kg
-        self.data = self._get_qa_from_file(osp.join(self.root, 'raw', 'vanilla', f'qa_{self.type}.txt'))
+        self.data = self._get_qa_from_file(osp.join(self.root, 'raw', 'vanilla-3', f'qa_{self.type}.txt'))
 
     def _get_qa_from_file(self, file):
         query_subgraph_data = []
