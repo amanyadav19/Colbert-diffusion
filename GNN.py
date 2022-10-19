@@ -26,6 +26,8 @@ class Net(torch.nn.Module):
         # self.bn1 = torch.nn.BatchNorm1d(128)
         # self.bn2 = torch.nn.BatchNorm1d(64)
         self.act1 = torch.nn.ReLU()
+        self.lin2 = torch.nn.Linear(embed_dim, 128)
+        self.act2 = torch.nn.ReLU()
         # self.act2 = torch.nn.ReLU()        
   
     def forward(self, data):
@@ -58,7 +60,9 @@ class Net(torch.nn.Module):
         # x = self.lin2(x)
         # x = self.act2(x)      
         x = F.dropout(x, p=0.5, training=self.training)
-
+        e = self.lin2(e)
+        e = self.act2(e)
+        e = F.dropout(e, p=0.5, training=self.training)
         # x = torch.sigmoid(self.lin3(x)).squeeze(1)
         
-        return x
+        return x, e
